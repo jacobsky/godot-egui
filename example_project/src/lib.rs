@@ -188,7 +188,7 @@ impl GodotEguiExample {
 }
 
 fn init(handle: InitHandle) {
-    handle.add_class::<GodotEguiExample>();
+    handle.add_tool_class::<GodotEguiExample>();
     godot_egui::register_classes(handle);
 }
 

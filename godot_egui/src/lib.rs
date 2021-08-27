@@ -381,4 +381,4 @@ impl GodotEgui {
     pub fn mouse_was_captured(&self) -> bool { self.mouse_was_captured }
 }
 
-pub fn register_classes(handle: InitHandle) { handle.add_class::<GodotEgui>(); }
+pub fn register_classes(handle: InitHandle) { handle.add_tool_class::<GodotEgui>(); }
