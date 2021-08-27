@@ -1,0 +1,88 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://GodotEgui.gdns" type="Script" id=1]
+[ext_resource path="res://GodotEguiStyler.gdns" type="Script" id=2]
+
+[node name="GodotEguiExample" type="ScrollContainer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="GodotEgui" type="PanelContainer" parent="."]
+margin_right = 1024.0
+margin_bottom = 600.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource( 1 )
+scroll_speed = 20.0
+consume_mouse_events = true
+override_default_fonts = false
+disable_texture_filtering = false
+custom_font_1 = "res://fonts/fontawesome/Font Awesome 5 Free-Solid-900.otf"
+custom_font_2 = "res://fonts/bubblegum_sans/BubblegumSans-Regular.otf"
+
+[node name="Panel" type="Panel" parent="GodotEgui"]
+margin_left = 7.0
+margin_top = 7.0
+margin_right = 1017.0
+margin_bottom = 593.0
+
+[node name="RichTextLabel" type="RichTextLabel" parent="GodotEgui"]
+margin_left = 7.0
+margin_top = 7.0
+margin_right = 1017.0
+margin_bottom = 593.0
+text = "asdf
+asdf
+asdf
+asdf
+asdfa
+sdfa
+sdfa
+sdf
+asdf
+asdfasdf
+asda
+dfas
+dfasd
+fasd
+fasdf
+asdfa
+asdf
+asdf
+asd
+fas
+dfa
+sdf
+asdf
+asdf
+asd
+fasd
+fasd
+fasd
+fasd
+fasd
+fasd
+fasdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf
+asdf"
