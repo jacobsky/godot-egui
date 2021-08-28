@@ -1,0 +1,1 @@
+This is an Addon for creating Egui Styles that can be used to help create consistent loadable skins for GodotEgui or any other Egui application.

@@ -1,9 +1,6 @@
 use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
-mod styler;
-pub use styler::GodotEguiStyler;
-
 pub fn load_texture(path: &str) -> Ref<Texture> {
     let loader = ResourceLoader::godot_singleton();
     loader.load(path, "Texture", false).expect("Texture found").cast().expect("Is texture")
@@ -71,7 +68,7 @@ impl GodotEguiExample {
         // You may also want to pass in `None` and draw a background using a regular Panel node instead.
         let mut frame = egui::Frame::default();
         frame.margin = egui::vec2(20.0, 20.0);
-
+        
         let mut should_reverse_font_priorities = false;
 
         gui.map_mut(|gui, instance| {
@@ -192,7 +189,6 @@ impl GodotEguiExample {
 
 fn init(handle: InitHandle) {
     handle.add_tool_class::<GodotEguiExample>();
-    handle.add_tool_class::<GodotEguiStyler>();
     godot_egui::register_classes(handle);
 }
 

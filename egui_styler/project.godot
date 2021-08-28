@@ -10,7 +10,7 @@ config_version=4
 
 [application]
 
-config/name="Egui Example"
+config/name="Egui Theme Styler Addon"
 run/main_scene="res://GodotEguiExample.tscn"
 config/icon="res://icon.png"
 
