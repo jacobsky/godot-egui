@@ -1,5 +1,5 @@
 use egui_stylist::StylerState;
-use gdnative::api::{FileDialog};
+use gdnative::api::FileDialog;
 use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
