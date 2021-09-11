@@ -76,7 +76,6 @@ pub struct GodotEgui {
     theme_path: String,
 }
 
-
 #[gdnative::methods]
 impl GodotEgui {
     fn register_properties(builder: &ClassBuilder<GodotEgui>) {
@@ -149,16 +148,13 @@ impl GodotEgui {
 
     /// Callback to listen for input. Translates input back to egui events.
     #[export]
-    fn _input(&mut self, owner: TRef<Control>, event: Ref<InputEvent>) {
+    fn _gui_input(&mut self, owner: TRef<Control>, event: Ref<InputEvent>) {
         let event = unsafe { event.assume_safe() };
         let mut raw_input = self.raw_input.borrow_mut();
 
         // Transforms mouse positions in viewport coordinates to egui coordinates.
         // NOTE: The egui is painted inside a control node, so its global rect offset must be taken into account
-        let mouse_pos_to_egui = |mouse_pos: Vector2| {
-            let transformed_pos = mouse_pos - owner.get_global_rect().origin.to_vector();
-            egui::Pos2 { x: transformed_pos.x, y: transformed_pos.y }
-        };
+        let mouse_pos_to_egui = |mouse_pos: Vector2| egui::Pos2 { x: mouse_pos.x, y: mouse_pos.y };
 
         if let Some(motion_ev) = event.cast::<InputEventMouseMotion>() {
             self.maybe_set_mouse_input_as_handled(owner);
