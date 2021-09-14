@@ -1,3 +1,4 @@
+use egui::ComboBox;
 use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
@@ -13,6 +14,8 @@ pub struct GodotEguiExample {
     elapsed_time: f64,
     counter: usize,
     checkbox: bool,
+    combox_box_value: i32,
+    slider_value: f32,
     icon_1: Ref<Texture>,
     icon_2: Ref<Texture>,
     use_custom_fonts: bool,
@@ -27,6 +30,8 @@ impl GodotEguiExample {
             gui: None,
             counter: 0,
             checkbox: false,
+            combox_box_value: 0,
+            slider_value: 1f32,
             elapsed_time: 0.0,
             icon_1: load_texture("res://icon.png"),
             icon_2: load_texture("res://icon_ferris.png"),
@@ -81,16 +86,13 @@ impl GodotEguiExample {
                 egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
                     ui.columns(2, |columns| {
                         let ui = &mut columns[0];
-
                         ui.heading("Godot Egui - Example app");
-
                         ui.add_space(5.0);
 
                         if ui.button("Press me to increase counter!").clicked() {
                             self.counter += 1;
                         }
                         ui.label(format!("Count is: {}", self.counter));
-
                         ui.add_space(5.0);
 
                         ui.horizontal(|ui| {
@@ -101,7 +103,6 @@ impl GodotEguiExample {
                                 ui.label("Unfortunately, it is not.");
                             }
                         });
-
                         ui.add_space(5.0);
 
                         ui.heading("You can even plot graphs");
@@ -146,16 +147,28 @@ impl GodotEguiExample {
                             should_reverse_font_priorities = true;
                         }
 
+                        ComboBox::from_label("This is a combo box")
+                            .selected_text(format!("{}", self.combox_box_value))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.combox_box_value, 0, "0");
+                                ui.selectable_value(&mut self.combox_box_value, 1, "1");
+                                ui.selectable_value(&mut self.combox_box_value, 2, "2");
+                                ui.selectable_value(&mut self.combox_box_value, 3, "3");
+                            });
+
+                        ui.add_space(5.0);
+                        ui.label("Set the value with the slider");
+                        ui.add(egui::Slider::new(&mut self.slider_value, 0.0..=100.0).text("value"));
                         ui.add_space(5.0);
 
                         ui.heading("Icon fonts  \u{f02d}");
                         ui.add_space(5.0);
+
                         ui.label(
                             "By loading icon fonts, such as Fontawesome, you can easily draw small icons. Icon \
                              fonts typically use private codepoints, so there's no need to worry about \
                              priorities:\n\n \u{f091} \u{f0f3} \u{f241} \u{f0e7} \u{f0fc}",
                         );
-
                         ui.add_space(5.0);
 
                         ui.horizontal(|ui| {
