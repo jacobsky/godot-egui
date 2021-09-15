@@ -116,6 +116,8 @@ impl GodotEgui {
             theme_path: "".to_owned(),
         }
     }
+
+    /// Set the pixels_per_point use by `egui` to render the screen. This should be used to scale the `egui` nodes if you are using a non-standard scale for nodes in your game.
     #[export]
     pub fn set_pixels_per_point(&mut self, _owner: TRef<Control>, pixels_per_point: f64) {
         if pixels_per_point > 0f64 {
@@ -161,13 +163,13 @@ impl GodotEgui {
             godot_error!("file {} does not exist", &self.theme_path)
         }
     }
-    
+
     /// Is used to indicate if the mouse was captured during the previous frame.
     #[export]
     pub fn mouse_was_captured(&self, _owner: TRef<Control>) -> bool {
         self.mouse_was_captured
     }
-    /// Call from the user code to pass the input event into `Egui`. 
+    /// Call from the user code to pass the input event into `Egui`.
     /// `event` should be the raw `InputEvent` that is handled by `_input`, `_gui_input` and `_unhandled_input`.
     /// `is_gui_input` should be true only if this event should be processed like it was emitted from the `_gui_input` callback.
     #[export]
@@ -184,7 +186,8 @@ impl GodotEgui {
                 // NOTE: The egui is painted inside a control node, so its global rect offset must be taken into account.
                 let offset_position = mouse_pos - owner.get_global_rect().origin.to_vector();
                 // This is used to get the correct rotation when the root node is rotated.
-                owner.get_global_transform()
+                owner
+                    .get_global_transform()
                     .inverse()
                     .expect("screen space coordinates must be invertible")
                     .transform_vector(offset_position)
@@ -304,7 +307,8 @@ impl GodotEgui {
         );
 
         // Paint the meshes
-        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in clipped_meshes.into_iter().zip(self.meshes.iter_mut())
+        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in
+            clipped_meshes.into_iter().zip(self.meshes.iter_mut())
         {
             // Skip the mesh if empty, but clear the mesh if it previously existed
             if mesh.vertices.is_empty() {
@@ -361,7 +365,7 @@ impl GodotEgui {
     /// This should only be necessary when you have a `reactive_update` GUI that needs to respond only to changes that occur
     /// asynchronously (such as via signals) and very rarely such as a static HUD.
     ///
-    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead. 
+    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead.
     #[export]
     fn refresh(&self, _owner: TRef<Control>) {
         self.egui_ctx.request_repaint();
@@ -386,7 +390,7 @@ impl GodotEgui {
 
         // Complete the frame and return the shapes and output
         let (output, shapes) = self.egui_ctx.end_frame();
-        
+
         // Each frame, we set the mouse_was_captured flag so that we know whether egui should be
         // consuming mouse events or not. This may introduce a one-frame lag in capturing input, but in practice it
         // shouldn't be an issue.
