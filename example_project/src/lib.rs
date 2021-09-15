@@ -2,6 +2,8 @@ use egui::ComboBox;
 use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
+mod color_test;
+
 pub fn load_texture(path: &str) -> Ref<Texture> {
     let loader = ResourceLoader::godot_singleton();
     loader.load(path, "Texture", false).expect("Texture found").cast().expect("Is texture")
@@ -222,6 +224,7 @@ impl GodotEguiExample {
 
 fn init(handle: InitHandle) {
     handle.add_class::<GodotEguiExample>();
+    handle.add_class::<color_test::GodotEguiColorTest>();
     godot_egui::register_classes(handle);
 }
 

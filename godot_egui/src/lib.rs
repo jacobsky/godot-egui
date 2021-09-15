@@ -16,14 +16,20 @@ pub mod egui_helpers;
 
 /// Converts an egui color into a godot color
 pub fn egui2color(c: egui::Color32) -> Color {
-    let as_f32 = |x| x as f32 / u8::MAX as f32;
-    Color::rgba(as_f32(c.r()), as_f32(c.g()), as_f32(c.b()), as_f32(c.a()))
+    // let as_f32 = |x| x as f32 / u8::MAX as f32;
+    // Color::rgba(as_f32(c.r()), as_f32(c.g()), as_f32(c.b()), as_f32(c.a()))
+    
+    let (r, g, b, a) = egui::Rgba::from(c).to_tuple();
+    Color::rgba(r, g, b, a)
+    // let hsva = egui::color::Hsva::from_srgba_premultiplied(c.to_array());
+    // Color::from_hsva(hsva.h, hsva.s, hsva.v, hsva.a)
 }
 
 /// Converts a godot color into an egui color
 pub fn color2egui(c: Color) -> egui::Color32 {
     let as_u8 = |x| (x * (u8::MAX as f32)) as u8;
     egui::Color32::from_rgba_premultiplied(as_u8(c.r), as_u8(c.g), as_u8(c.b), as_u8(c.a))
+    // egui::Color32::from(egui::Rgba::from_rgba_premultiplied(c.r, c.g, c.b, c.a))
 }
 
 /// Converts an u64, stored in an `egui::Texture::User` back into a Godot `Rid`.
@@ -297,7 +303,7 @@ impl GodotEgui {
         );
 
         // Paint the meshes
-        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in clipped_meshes.into_iter().zip(self.meshes.iter_mut())
+        for (egui::ClippedMesh(clip_rect, mesh), vs_mesh) in clipped_meshes.into_iter().zip(self.meshes.iter_mut())
         {
             // Skip the mesh if empty, but clear the mesh if it previously existed
             if mesh.vertices.is_empty() {
@@ -313,38 +319,51 @@ impl GodotEgui {
             // Safety: Transmuting from Vec<u32> to Vec<i32> should be safe as long as indices don't overflow.
             // If the index array overflows we will just get an OOB and crash which is fine.
             #[allow(clippy::unsound_collection_transmute)]
-            let indices = Int32Array::from_vec(unsafe { std::mem::transmute::<_, Vec<i32>>(mesh.indices) });
-            let vertices = mesh
-                .vertices
-                .iter()
-                .map(|x| x.pos)
-                .map(|pos| Vector2::new(pos.x, pos.y))
-                .collect::<Vector2Array>();
-
-            let uvs =
-                mesh.vertices.iter().map(|x| x.uv).map(|uv| Vector2::new(uv.x, uv.y)).collect::<Vector2Array>();
-            let colors = mesh.vertices.iter().map(|x| x.color).map(egui2color).collect::<ColorArray>();
-
-            vs.canvas_item_clear(vs_mesh.canvas_item);
-            vs.canvas_item_add_triangle_array(
-                vs_mesh.canvas_item,
-                indices,
-                vertices,
-                colors,
-                uvs,
-                Int32Array::new(),
-                Float32Array::new(),
-                texture_rid,
-                -1,
-                Rid::new(),
-                false,
-                false,
-            );
-
-            vs.canvas_item_set_transform(
-                vs_mesh.canvas_item,
-                Transform2D::new(pixels_per_point, 0.0, 0.0, pixels_per_point, 0.0, 0.0),
-            );
+            for mut mesh in mesh.split_to_u16() {
+                // First we need to get the indicies and map them to the i32 which godot understands.
+                let indicies = mesh.indices.drain(0..).map(i32::from).collect::<Vec<i32>>();
+                // Then we can get the indicies
+                let indices = Int32Array::from_vec(indicies);
+                let vertices = mesh
+                    .vertices
+                    .iter()
+                    .map(|x| x.pos)
+                    .map(|pos| Vector2::new(pos.x, pos.y))
+                    .collect::<Vector2Array>();
+    
+                let uvs = mesh.vertices.iter().map(|x| x.uv).map(|uv| Vector2::new(uv.x, uv.y)).collect::<Vector2Array>();
+                let colors = mesh.vertices.iter().map(|x| x.color).map(egui2color).collect::<ColorArray>();
+                
+                vs.canvas_item_clear(vs_mesh.canvas_item);
+                vs.canvas_item_add_triangle_array(
+                    vs_mesh.canvas_item,
+                    indices,
+                    vertices,
+                    colors,
+                    uvs,
+                    Int32Array::new(),
+                    Float32Array::new(),
+                    texture_rid,
+                    -1,
+                    Rid::new(),
+                    false,
+                    false,
+                );
+                
+                vs.canvas_item_set_transform(
+                    vs_mesh.canvas_item,
+                    Transform2D::new(pixels_per_point, 0.0, 0.0, pixels_per_point, 0.0, 0.0),
+                );
+                vs.canvas_item_set_clip(vs_mesh.canvas_item, true);
+                vs.canvas_item_set_custom_rect(
+                    vs_mesh.canvas_item,
+                    true,
+                    Rect2 {
+                        origin: Point2::new(clip_rect.min.x, clip_rect.min.y),
+                        size: Size2::new(clip_rect.max.x - clip_rect.min.x, clip_rect.max.y - clip_rect.min.y),
+                    },
+                );
+            }
         }
     }
     /// Requests that the UI is refreshed from EGUI.
