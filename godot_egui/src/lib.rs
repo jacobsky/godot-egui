@@ -2,7 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use gdnative::api::{
-    File, GlobalConstants, ImageTexture, InputEventMouseButton, InputEventMouseMotion, VisualServer,
+    File, GlobalConstants, ImageTexture, InputEventMouseButton, InputEventMouseMotion, ShaderMaterial,
+    VisualServer,
 };
 
 use gdnative::nativescript::property::{EnumHint, FloatHint, RangeHint};
@@ -15,20 +16,17 @@ pub(crate) mod enum_conversions;
 pub mod egui_helpers;
 
 /// Converts an egui color into a godot color
-pub fn egui2color(c: egui::Color32) -> Color {
+pub fn egui2color(color: egui::Color32) -> Color {
     // let as_f32 = |x| x as f32 / u8::MAX as f32;
     // Color::rgba(as_f32(c.r()), as_f32(c.g()), as_f32(c.b()), as_f32(c.a()))
-    
-    let (r, g, b, a) = egui::Rgba::from(c).to_tuple();
+    let (r, g, b, a) = egui::Rgba::from(color).to_tuple();
     Color::rgba(r, g, b, a)
-    // let hsva = egui::color::Hsva::from_srgba_premultiplied(c.to_array());
-    // Color::from_hsva(hsva.h, hsva.s, hsva.v, hsva.a)
 }
 
 /// Converts a godot color into an egui color
-pub fn color2egui(c: Color) -> egui::Color32 {
+pub fn color2egui(color: Color) -> egui::Color32 {
     let as_u8 = |x| (x * (u8::MAX as f32)) as u8;
-    egui::Color32::from_rgba_premultiplied(as_u8(c.r), as_u8(c.g), as_u8(c.b), as_u8(c.a))
+    egui::Color32::from_rgba_premultiplied(as_u8(color.r), as_u8(color.g), as_u8(color.b), as_u8(color.a))
     // egui::Color32::from(egui::Rgba::from_rgba_premultiplied(c.r, c.g, c.b, c.a))
 }
 
@@ -66,7 +64,7 @@ pub struct GodotEgui {
     main_texture: SyncedTexture,
     raw_input: Rc<RefCell<egui::RawInput>>,
     mouse_was_captured: bool,
-
+    shader_material: Option<Ref<ShaderMaterial, Shared>>,
     /// This flag will force a UI to redraw every frame.
     /// This can be used for when the UI's backend events are always changing.
     #[property]
@@ -119,6 +117,7 @@ impl GodotEgui {
             },
             raw_input: Rc::new(RefCell::new(egui::RawInput::default())),
             mouse_was_captured: false,
+            shader_material: None,
             continous_update: false,
             scroll_speed: 20.0,
             consume_mouse_events: true,
@@ -141,6 +140,15 @@ impl GodotEgui {
     /// custom fonts defined as properties
     #[export]
     fn _ready(&mut self, _owner: TRef<Control>) {
+        // Create the egui shader to automatically add all the cool stuff.
+        let shader = Shader::new();
+        let shader_code = include_str!("egui2godot.shader");
+        shader.set_code(shader_code);
+        let shader = shader.into_shared();
+        let shader_material = ShaderMaterial::new();
+        shader_material.set_shader(shader);
+        self.shader_material = Some(shader_material.into_shared());
+
         // Run a single dummy frame to ensure the fonts are created, otherwise egui panics
         self.egui_ctx.begin_frame(egui::RawInput::default());
         self.egui_ctx.set_pixels_per_point(self.pixels_per_point as f32);
@@ -249,11 +257,21 @@ impl GodotEgui {
         let egui_texture = &self.egui_ctx.texture();
 
         let vs = unsafe { VisualServer::godot_singleton() };
+        let material_rid = self
+            .shader_material
+            .as_ref()
+            .map(|material| unsafe { material.assume_safe() }.get_rid())
+            .expect("should be initialized");
 
+        // .cast::<CanvasItem>().and_then(|ci| ci.material())
         // Sync egui's texture to our Godot texture, only when needed
         if self.main_texture.texture_version != Some(egui_texture.version) {
-            let pixels: ByteArray =
-                egui_texture.pixels.iter().map(|alpha| [255u8, 255u8, 255u8, *alpha]).flatten().collect();
+            let pixels: ByteArray = egui_texture
+                .srgba_pixels(1.0)
+                .map(egui2color)
+                .map(|c|[(c.r * 255.0) as u8, (c.g * 255.0) as u8, (c.b * 255.0) as u8, (c.a * 255.0) as u8])
+                .flatten()
+                .collect();
 
             let image = Image::new();
             image.create_from_data(
@@ -330,11 +348,18 @@ impl GodotEgui {
                     .map(|x| x.pos)
                     .map(|pos| Vector2::new(pos.x, pos.y))
                     .collect::<Vector2Array>();
-    
-                let uvs = mesh.vertices.iter().map(|x| x.uv).map(|uv| Vector2::new(uv.x, uv.y)).collect::<Vector2Array>();
+
+                let uvs = mesh
+                    .vertices
+                    .iter()
+                    .map(|x| x.uv)
+                    .map(|uv| Vector2::new(uv.x, uv.y))
+                    .collect::<Vector2Array>();
                 let colors = mesh.vertices.iter().map(|x| x.color).map(egui2color).collect::<ColorArray>();
-                
+
                 vs.canvas_item_clear(vs_mesh.canvas_item);
+
+                vs.canvas_item_set_material(vs_mesh.canvas_item, material_rid);
                 vs.canvas_item_add_triangle_array(
                     vs_mesh.canvas_item,
                     indices,
@@ -349,7 +374,7 @@ impl GodotEgui {
                     false,
                     false,
                 );
-                
+
                 vs.canvas_item_set_transform(
                     vs_mesh.canvas_item,
                     Transform2D::new(pixels_per_point, 0.0, 0.0, pixels_per_point, 0.0, 0.0),
@@ -373,7 +398,7 @@ impl GodotEgui {
     /// This should only be necessary when you have a `reactive_update` GUI that needs to respond only to changes that occur
     /// asynchronously (such as via signals) and very rarely such as a static HUD.
     ///
-    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead. 
+    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead.
     #[export]
     fn refresh(&self, _owner: TRef<Control>) {
         self.egui_ctx.request_repaint();
@@ -398,7 +423,7 @@ impl GodotEgui {
 
         // Complete the frame and return the shapes and output
         let (output, shapes) = self.egui_ctx.end_frame();
-        
+
         // Each frame, we set the mouse_was_captured flag so that we know whether egui should be
         // consuming mouse events or not. This may introduce a one-frame lag in capturing input, but in practice it
         // shouldn't be an issue.

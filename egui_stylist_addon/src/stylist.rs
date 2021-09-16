@@ -1,5 +1,5 @@
 use egui_stylist::StylerState;
-use gdnative::api::{FileDialog};
+use gdnative::api::FileDialog;
 use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
@@ -157,7 +157,7 @@ fn read_file(filepath: &str) -> String {
 pub fn load_theme(path: GodotString) -> egui_theme::EguiTheme {
     // Load the GodotEguiTheme via the ResourceLoader and then extract the EguiTheme
     let file_path = path.to_string();
-    
+
     // We should allow for both godot resources as well as the vanilla .ron files to be published.
     let theme = {
         let file = read_file(&file_path);

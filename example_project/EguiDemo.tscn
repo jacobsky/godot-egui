@@ -1,13 +1,11 @@
 [gd_scene load_steps=3 format=2]
 
 [ext_resource path="res://GodotEgui.gdns" type="Script" id=1]
-[ext_resource path="res://GodotEguiExample.gdns" type="Script" id=2]
+[ext_resource path="res://EguiDemo.gdns" type="Script" id=2]
 
-[node name="GodotEguiExample" type="Control"]
+[node name="EguiDemo" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-size_flags_horizontal = 3
-size_flags_vertical = 3
 script = ExtResource( 2 )
 __meta__ = {
 "_edit_use_anchors_": false
@@ -17,7 +15,4 @@ __meta__ = {
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource( 1 )
-__meta__ = {
-"_edit_use_anchors_": false
-}
 continous_update = true

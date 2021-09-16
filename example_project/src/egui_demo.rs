@@ -1,18 +1,17 @@
-use egui::{CtxRef, Window};
 use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
 #[derive(NativeClass)]
 #[inherit(Control)]
-pub struct GodotEguiColorTest {
-    egui_test: egui_demo_lib::ColorTest,
+pub struct GodotEguiDemoLib {
+    egui_demo: egui_demo_lib::DemoWindows,
     gui: Option<Instance<GodotEgui, Shared>>,
 }
 
 #[gdnative::methods]
-impl GodotEguiColorTest {
+impl GodotEguiDemoLib {
     fn new(_owner: &Control) -> Self {
-        Self { egui_test: egui_demo_lib::ColorTest::default(), gui: None }
+        Self { egui_demo: egui_demo_lib::DemoWindows::default(), gui: None }
     }
 
     #[export]
@@ -31,17 +30,8 @@ impl GodotEguiColorTest {
     fn _process(&mut self, _owner: &Control, _delta: f64) {
         let gui = unsafe { self.gui.as_ref().expect("GUI initialized").assume_safe() };
         gui.map_mut(|gui, instance| {
-            gui.update_ctx(instance, |ctx| self.draw(ctx));
+            gui.update_ctx(instance, |ctx| self.egui_demo.ui(ctx));
         })
         .expect("egui error");
-    }
-
-    fn draw(&mut self, ctx: &mut CtxRef) {
-        Window::new("Color Test").scroll(true).show(ctx, |ui| {
-            self.egui_test.ui(ui, &mut None);
-        });
-        Window::new("Settings").scroll(true).show(ctx, |ui| {
-            ctx.settings_ui(ui);
-        });
     }
 }

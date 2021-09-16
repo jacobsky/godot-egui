@@ -3,7 +3,7 @@ use gdnative::prelude::*;
 use godot_egui::GodotEgui;
 
 mod color_test;
-
+mod egui_demo;
 pub fn load_texture(path: &str) -> Ref<Texture> {
     let loader = ResourceLoader::godot_singleton();
     loader.load(path, "Texture", false).expect("Texture found").cast().expect("Is texture")
@@ -81,7 +81,6 @@ impl GodotEguiExample {
 
         self.elapsed_time += delta;
 
-        
         // A frame can be passed to `update` specifying background color, margin and other properties
         // You may also want to pass in `None` and draw a background using a regular Panel node instead.
         let frame = egui::Frame { margin: egui::vec2(20.0, 20.0), ..Default::default() };
@@ -93,11 +92,10 @@ impl GodotEguiExample {
             if self.dynamically_change_pixels_per_point {
                 gui.set_pixels_per_point(instance, (self.elapsed_time.sin() * 0.20) + 0.8);
             }
-            
+
             // We use the `update` method here to just draw a simple UI on the central panel. If you need more
             // fine-grained control, you can use update_ctx to get access to egui's context directly.
             gui.update_ctx(instance, /* Some(frame), */ |ctx| {
-
                 egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
                     ui.columns(2, |columns| {
                         let ui = &mut columns[0];
@@ -225,6 +223,7 @@ impl GodotEguiExample {
 fn init(handle: InitHandle) {
     handle.add_class::<GodotEguiExample>();
     handle.add_class::<color_test::GodotEguiColorTest>();
+    handle.add_class::<egui_demo::GodotEguiDemoLib>();
     godot_egui::register_classes(handle);
 }
 
