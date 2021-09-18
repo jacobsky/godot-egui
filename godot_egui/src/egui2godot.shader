@@ -8,8 +8,8 @@ vec4 from_linear(vec4 linearRGB) {
 	return vec4(mix(higher, lower, cutoff), linearRGB.a);
 }
 
+
 void fragment(){
 	vec4 color = texture(TEXTURE, UV) * COLOR;
 	COLOR = from_linear(color);
-//	COLOR = texture(TEXTURE, UV) * COLOR;
 }

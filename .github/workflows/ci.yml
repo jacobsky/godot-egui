@@ -24,21 +24,6 @@ jobs:
         with:
           command: check
           args: --all-features
-  check_windows:
-    name: Check windows
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features
-
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest

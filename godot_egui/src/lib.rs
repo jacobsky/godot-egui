@@ -269,7 +269,7 @@ impl GodotEgui {
             let pixels: ByteArray = egui_texture
                 .srgba_pixels(1.0)
                 .map(egui2color)
-                .map(|c|[(c.r * 255.0) as u8, (c.g * 255.0) as u8, (c.b * 255.0) as u8, (c.a * 255.0) as u8])
+                .map(|c| [(c.r * 255.0) as u8, (c.g * 255.0) as u8, (c.b * 255.0) as u8, (c.a * 255.0) as u8])
                 .flatten()
                 .collect();
 
