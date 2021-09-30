@@ -16,6 +16,20 @@ impl GodotEguiStylist {
     fn new(_: &Control) -> Self {
         Self { style: StylerState::default(), godot_egui: None, file_dialog: None }
     }
+
+    /// Updates egui from the `_gui_input` callback
+    #[export]
+    pub fn _gui_input(&mut self, owner: TRef<Control>, event: Ref<InputEvent>) {
+        let gui = unsafe { self.godot_egui.as_ref().expect("GUI initialized").assume_safe() };
+        gui.map_mut(|gui, instance| {
+            gui.handle_godot_input(instance, event, true);
+            if gui.mouse_was_captured(instance) {
+                owner.accept_event();
+            }
+        })
+        .expect("map_mut should succeed");
+    }
+
     #[export]
     fn _ready(&mut self, owner: TRef<Control>) {
         let gui = owner
@@ -157,13 +171,9 @@ fn read_file(filepath: &str) -> String {
 pub fn load_theme(path: GodotString) -> egui_theme::EguiTheme {
     // Load the GodotEguiTheme via the ResourceLoader and then extract the EguiTheme
     let file_path = path.to_string();
-    
-    // We should allow for both godot resources as well as the vanilla .ron files to be published.
-    let theme = {
-        let file = read_file(&file_path);
-        ron::from_str(&file).expect("this should load")
-    };
-    theme
+
+    let file = read_file(&file_path);
+    ron::from_str(&file).expect("this should load")
 }
 
 pub fn save_theme(path: GodotString, theme: egui_theme::EguiTheme) {

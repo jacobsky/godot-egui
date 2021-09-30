@@ -70,10 +70,6 @@ pub struct GodotEgui {
     #[property]
     scroll_speed: f32,
 
-    /// Whether or not this egui should call set_input_as_handled after receiving a mouse event.
-    #[property]
-    consume_mouse_events: bool,
-
     /// When enabled, no texture filtering will be performed. Useful for a pixel-art style.
     #[property]
     disable_texture_filtering: bool,
@@ -115,18 +111,30 @@ impl GodotEgui {
             mouse_was_captured: false,
             continous_update: false,
             scroll_speed: 20.0,
-            consume_mouse_events: true,
             disable_texture_filtering: false,
             pixels_per_point: 1f64,
             theme_path: "".to_owned(),
         }
     }
 
+    /// Set the pixels_per_point use by `egui` to render the screen. This should be used to scale the `egui` nodes if you are using a non-standard scale for nodes in your game.
+    #[export]
+    pub fn set_pixels_per_point(&mut self, _owner: TRef<Control>, pixels_per_point: f64) {
+        if pixels_per_point > 0f64 {
+            self.pixels_per_point = pixels_per_point;
+            self.egui_ctx.set_pixels_per_point(self.pixels_per_point as f32);
+        } else {
+            godot_error!("pixels per point must be greater than 0");
+        }
+    }
 
     /// Run when this node is added to the scene tree. Runs some initialization logic, like registering any
     /// custom fonts defined as properties
     #[export]
-    fn _ready(&mut self, _owner: TRef<Control>) {
+    fn _ready(&mut self, owner: TRef<Control>) {
+        // This node should **never** take input events or be capable of taking focus from another node.
+        owner.set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+        owner.set_focus_mode(Control::FOCUS_NONE);
         // Run a single dummy frame to ensure the fonts are created, otherwise egui panics
         self.egui_ctx.begin_frame(egui::RawInput::default());
         self.egui_ctx.set_pixels_per_point(self.pixels_per_point as f32);
@@ -156,34 +164,45 @@ impl GodotEgui {
         }
     }
 
-    fn maybe_set_mouse_input_as_handled(&self, owner: TRef<Control>) {
-        if self.mouse_was_captured && self.consume_mouse_events {
-            unsafe { owner.get_viewport().expect("Viewport").assume_safe().set_input_as_handled() }
-        }
-    }
-
-    /// Callback to listen for input. Translates input back to egui events.
+    /// Is used to indicate if the mouse was captured during the previous frame.
     #[export]
-    fn _gui_input(&mut self, owner: TRef<Control>, event: Ref<InputEvent>) {
+    pub fn mouse_was_captured(&self, _owner: TRef<Control>) -> bool {
+        self.mouse_was_captured
+    }
+    /// Call from the user code to pass the input event into `Egui`.
+    /// `event` should be the raw `InputEvent` that is handled by `_input`, `_gui_input` and `_unhandled_input`.
+    /// `is_gui_input` should be true only if this event should be processed like it was emitted from the `_gui_input` callback.
+    #[export]
+    pub fn handle_godot_input(&mut self, owner: TRef<Control>, event: Ref<InputEvent>, is_gui_input: bool) {
         let event = unsafe { event.assume_safe() };
         let mut raw_input = self.raw_input.borrow_mut();
         let pixels_per_point = self.egui_ctx.pixels_per_point();
         // Transforms mouse positions in viewport coordinates to egui coordinates.
-        // NOTE: The egui is painted inside a control node, so its global rect offset must be taken into account
         let mouse_pos_to_egui = |mouse_pos: Vector2| {
+            let transformed_pos = if is_gui_input {
+                // Note: The `_gui_input` callback adjusts the offset before adding the event.
+                mouse_pos
+            } else {
+                // NOTE: The egui is painted inside a control node, so its global rect offset must be taken into account.
+                let offset_position = mouse_pos - owner.get_global_rect().origin.to_vector();
+                // This is used to get the correct rotation when the root node is rotated.
+                owner
+                    .get_global_transform()
+                    .inverse()
+                    .expect("screen space coordinates must be invertible")
+                    .transform_vector(offset_position)
+            };
             // It is necessary to translate the mouse position which refers to physical pixel position to egui's logical points
             // This is found using the inverse of current `pixels_per_point` setting.
             let points_per_pixel = 1.0 / pixels_per_point;
-            egui::Pos2 { x: mouse_pos.x * points_per_pixel, y: mouse_pos.y * points_per_pixel }
+            egui::Pos2 { x: transformed_pos.x * points_per_pixel, y: transformed_pos.y * points_per_pixel }
         };
 
         if let Some(motion_ev) = event.cast::<InputEventMouseMotion>() {
-            self.maybe_set_mouse_input_as_handled(owner);
             raw_input.events.push(egui::Event::PointerMoved(mouse_pos_to_egui(motion_ev.position())))
         }
 
         if let Some(button_ev) = event.cast::<InputEventMouseButton>() {
-            self.maybe_set_mouse_input_as_handled(owner);
             if let Some(button) = enum_conversions::mouse_button_index_to_egui(button_ev.button_index()) {
                 raw_input.events.push(egui::Event::PointerButton {
                     pos: mouse_pos_to_egui(button_ev.position()),
@@ -288,7 +307,8 @@ impl GodotEgui {
         );
 
         // Paint the meshes
-        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in clipped_meshes.into_iter().zip(self.meshes.iter_mut())
+        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in
+            clipped_meshes.into_iter().zip(self.meshes.iter_mut())
         {
             // Skip the mesh if empty, but clear the mesh if it previously existed
             if mesh.vertices.is_empty() {
@@ -345,7 +365,7 @@ impl GodotEgui {
     /// This should only be necessary when you have a `reactive_update` GUI that needs to respond only to changes that occur
     /// asynchronously (such as via signals) and very rarely such as a static HUD.
     ///
-    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead. 
+    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead.
     #[export]
     fn refresh(&self, _owner: TRef<Control>) {
         self.egui_ctx.request_repaint();
@@ -370,7 +390,7 @@ impl GodotEgui {
 
         // Complete the frame and return the shapes and output
         let (output, shapes) = self.egui_ctx.end_frame();
-        
+
         // Each frame, we set the mouse_was_captured flag so that we know whether egui should be
         // consuming mouse events or not. This may introduce a one-frame lag in capturing input, but in practice it
         // shouldn't be an issue.
@@ -400,10 +420,6 @@ impl GodotEgui {
                 }))
                 .show(egui_ctx, draw_fn);
         })
-    }
-
-    pub fn mouse_was_captured(&self) -> bool {
-        self.mouse_was_captured
     }
 }
 
