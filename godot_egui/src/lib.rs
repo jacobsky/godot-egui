@@ -338,6 +338,7 @@ impl GodotEgui {
             // If the index array overflows we will just get an OOB and crash which is fine.
             #[allow(clippy::unsound_collection_transmute)]
             for mut mesh in mesh.split_to_u16() {
+                
                 // First we need to get the indicies and map them to the i32 which godot understands.
                 let indicies = mesh.indices.drain(0..).map(i32::from).collect::<Vec<i32>>();
                 // Then we can get the indicies
@@ -358,8 +359,10 @@ impl GodotEgui {
                 let colors = mesh.vertices.iter().map(|x| x.color).map(egui2color).collect::<ColorArray>();
 
                 vs.canvas_item_clear(vs_mesh.canvas_item);
-
-                vs.canvas_item_set_material(vs_mesh.canvas_item, material_rid);
+                if let egui::TextureId::Egui = mesh.texture_id {
+                    vs.canvas_item_set_material(vs_mesh.canvas_item, material_rid);
+                }
+                
                 vs.canvas_item_add_triangle_array(
                     vs_mesh.canvas_item,
                     indices,
