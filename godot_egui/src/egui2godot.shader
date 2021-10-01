@@ -10,6 +10,6 @@ vec4 from_linear(vec4 linearRGB) {
 
 
 void fragment(){
-	vec4 color = texture(TEXTURE, UV) * COLOR;
-	COLOR = from_linear(color);
+	vec4 color = from_linear(COLOR);
+	COLOR = texture(TEXTURE, UV) * color;
 }
