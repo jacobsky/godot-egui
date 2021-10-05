@@ -69,8 +69,8 @@ pub struct GodotEgui {
     shader_material: Option<Ref<ShaderMaterial, Shared>>,
     /// This flag will force a UI to redraw every frame.
     /// This can be used for when the UI's backend events are always changing.
-    #[property]
-    continous_update: bool,
+    #[property(default = false)]
+    reactive_update: bool,
 
     /// The amount of scrolled pixels per mouse wheel event
     #[property]
@@ -117,7 +117,7 @@ impl GodotEgui {
             mouse_was_captured: false,
             cursor_icon: egui::CursorIcon::Default,
             shader_material: None,
-            continous_update: false,
+            reactive_update: false,
             scroll_speed: 20.0,
             disable_texture_filtering: false,
             pixels_per_point: 1f64,
@@ -411,13 +411,13 @@ impl GodotEgui {
         }
     }
     /// Requests that the UI is refreshed from EGUI.
-    /// Has no effect when `continous_update` is enabled.
+    /// Has no effect when `reactive_update` is false.
     /// ## Usage Note
     ///
     /// This should only be necessary when you have a `reactive_update` GUI that needs to respond only to changes that occur
     /// asynchronously (such as via signals) and very rarely such as a static HUD.
     ///
-    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead.
+    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `reactive_update` to true instead.
     #[export]
     fn refresh(&self, _owner: TRef<Control>) {
         self.egui_ctx.request_repaint();
@@ -436,9 +436,9 @@ impl GodotEgui {
 
         self.egui_ctx.begin_frame(raw_input);
 
-        // When using continous update mode, it is necessary to manually request a repaint so that the gui
-        // will redraw itself regardless of whether or not it detects input events or animations.
-        if self.continous_update {
+        // This ensures that while not using `reactive_update` that the UI is redrawn each frame regardless of whether the output would
+        // normally request a repaint.
+        if !self.reactive_update {
             self.egui_ctx.request_repaint();
         }
 

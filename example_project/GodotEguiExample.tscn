@@ -24,6 +24,5 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 scroll_speed = 20.0
-continous_update = true
 disable_texture_filtering = false
 EguiTheme = "res://godot-editor.eguitheme"
