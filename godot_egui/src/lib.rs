@@ -63,8 +63,8 @@ pub struct GodotEgui {
 
     /// This flag will force a UI to redraw every frame.
     /// This can be used for when the UI's backend events are always changing.
-    #[property]
-    continous_update: bool,
+    #[property(default = false)]
+    reactive_update: bool,
 
     /// The amount of scrolled pixels per mouse wheel event
     #[property]
@@ -113,7 +113,7 @@ impl GodotEgui {
             },
             raw_input: Rc::new(RefCell::new(egui::RawInput::default())),
             mouse_was_captured: false,
-            continous_update: false,
+            reactive_update: false,
             scroll_speed: 20.0,
             consume_mouse_events: true,
             disable_texture_filtering: false,
@@ -297,7 +297,8 @@ impl GodotEgui {
         );
 
         // Paint the meshes
-        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in clipped_meshes.into_iter().zip(self.meshes.iter_mut())
+        for (egui::ClippedMesh(_clip_rect, mesh), vs_mesh) in
+            clipped_meshes.into_iter().zip(self.meshes.iter_mut())
         {
             // Skip the mesh if empty, but clear the mesh if it previously existed
             if mesh.vertices.is_empty() {
@@ -348,13 +349,13 @@ impl GodotEgui {
         }
     }
     /// Requests that the UI is refreshed from EGUI.
-    /// Has no effect when `continous_update` is enabled.
+    /// Has no effect when `reactive_update` is false.
     /// ## Usage Note
     ///
     /// This should only be necessary when you have a `reactive_update` GUI that needs to respond only to changes that occur
     /// asynchronously (such as via signals) and very rarely such as a static HUD.
     ///
-    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `continous_update` to true instead. 
+    /// If the UI should be updated almost every frame due to animations or constant changes with data, favor setting `reactive_update` to true instead.
     #[export]
     fn refresh(&self, _owner: TRef<Control>) {
         self.egui_ctx.request_repaint();
@@ -369,9 +370,9 @@ impl GodotEgui {
 
         self.egui_ctx.begin_frame(raw_input);
 
-        // When using continous update mode, it is necessary to manually request a repaint so that the gui
-        // will redraw itself regardless of whether or not it detects input events or animations.
-        if self.continous_update {
+        // This ensures that while not using `reactive_update` that the UI is redrawn each frame regardless of whether the output would
+        // normally request a repaint.
+        if !self.reactive_update {
             self.egui_ctx.request_repaint();
         }
 
@@ -379,7 +380,7 @@ impl GodotEgui {
 
         // Complete the frame and return the shapes and output
         let (output, shapes) = self.egui_ctx.end_frame();
-        
+
         // Each frame, we set the mouse_was_captured flag so that we know whether egui should be
         // consuming mouse events or not. This may introduce a one-frame lag in capturing input, but in practice it
         // shouldn't be an issue.

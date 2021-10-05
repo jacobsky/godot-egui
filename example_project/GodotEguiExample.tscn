@@ -20,8 +20,7 @@ script = ExtResource( 1 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
-continous_update = true
+scroll_speed = 20.0
 consume_mouse_events = true
 disable_texture_filtering = false
-scroll_speed = 20.0
 EguiTheme = "res://godot-editor.eguitheme"
